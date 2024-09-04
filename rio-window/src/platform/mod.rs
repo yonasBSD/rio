@@ -22,24 +22,6 @@ pub mod x11;
     macos_platform,
     x11_platform,
     wayland_platform,
-    docsrs,
-))]
-pub mod run_on_demand;
-
-#[cfg(any(
-    windows_platform,
-    macos_platform,
-    x11_platform,
-    wayland_platform,
-    docsrs,
-))]
-pub mod pump_events;
-
-#[cfg(any(
-    windows_platform,
-    macos_platform,
-    x11_platform,
-    wayland_platform,
     orbital_platform,
     docsrs
 ))]

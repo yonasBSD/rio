@@ -187,13 +187,6 @@ impl ApplicationDelegate {
         self.ivars().event_handler.set(handler, closure)
     }
 
-    /// If `pump_events` is called to progress the event loop then we
-    /// bootstrap the event loop via `-[NSApplication run]` but will use
-    /// `CFRunLoopRunInMode` for subsequent calls to `pump_events`.
-    pub fn set_stop_on_launch(&self) {
-        self.ivars().stop_on_launch.set(true);
-    }
-
     pub fn set_stop_before_wait(&self, value: bool) {
         self.ivars().stop_before_wait.set(value)
     }
@@ -238,10 +231,6 @@ impl ApplicationDelegate {
 
     pub fn exit(&self) {
         self.ivars().exit.set(true)
-    }
-
-    pub fn clear_exit(&self) {
-        self.ivars().exit.set(false)
     }
 
     pub fn exiting(&self) -> bool {

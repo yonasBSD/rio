@@ -174,15 +174,6 @@ unsafe impl Send for SendSyncRawWindowHandle {}
 unsafe impl Sync for SendSyncRawWindowHandle {}
 
 impl WindowAttributes {
-    /// Initializes new attributes with default values.
-    #[inline]
-    #[deprecated = "use `Window::default_attributes` instead"]
-    pub fn new() -> Self {
-        Default::default()
-    }
-}
-
-impl WindowAttributes {
     /// Get the parent window stored on the attributes.
     pub fn parent_window(&self) -> Option<&raw_window_handle::RawWindowHandle> {
         self.parent_window.as_ref().map(|handle| &handle.0)
@@ -1458,13 +1449,6 @@ impl Window {
         let _span = tracing::debug_span!("rio_window::Window::set_cursor",).entered();
         self.window
             .maybe_queue_on_main(move |w| w.set_cursor(cursor))
-    }
-
-    /// Deprecated! Use [`Window::set_cursor()`] instead.
-    #[deprecated = "Renamed to `set_cursor`"]
-    #[inline]
-    pub fn set_cursor_icon(&self, icon: CursorIcon) {
-        self.set_cursor(icon)
     }
 
     /// Changes the position of the cursor in window coordinates.

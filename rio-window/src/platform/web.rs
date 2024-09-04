@@ -186,14 +186,6 @@ pub trait EventLoopExtWebSys {
     )]
     /// [^1]: `run_app()` is _not_ available on WASM when the target supports `exception-handling`.
     fn spawn_app<A: ApplicationHandler<Self::UserEvent> + 'static>(self, app: A);
-
-    /// See [`spawn_app`].
-    ///
-    /// [`spawn_app`]: Self::spawn_app
-    #[deprecated = "use EventLoopExtWebSys::spawn_app"]
-    fn spawn<F>(self, event_handler: F)
-    where
-        F: 'static + FnMut(Event<Self::UserEvent>, &ActiveEventLoop);
 }
 
 impl<T> EventLoopExtWebSys for EventLoop<T> {

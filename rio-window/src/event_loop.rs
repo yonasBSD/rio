@@ -68,15 +68,6 @@ pub struct EventLoopBuilder<T: 'static> {
 
 static EVENT_LOOP_CREATED: AtomicBool = AtomicBool::new(false);
 
-impl EventLoopBuilder<()> {
-    /// Start building a new event loop.
-    #[inline]
-    #[deprecated = "use `EventLoop::builder` instead"]
-    pub fn new() -> Self {
-        EventLoop::builder()
-    }
-}
-
 impl<T> EventLoopBuilder<T> {
     /// Builds a new event loop.
     ///
@@ -219,21 +210,6 @@ impl<T> EventLoop<T> {
         }
     }
 
-    /// See [`run_app`].
-    ///
-    /// [`run_app`]: Self::run_app
-    #[inline]
-    #[deprecated = "use `EventLoop::run_app` instead"]
-    #[cfg(not(all(web_platform, target_feature = "exception-handling")))]
-    pub fn run<F>(self, event_handler: F) -> Result<(), EventLoopError>
-    where
-        F: FnMut(Event<T>, &ActiveEventLoop),
-    {
-        let _span = tracing::debug_span!("rio_window::EventLoop::run").entered();
-
-        self.event_loop.run(event_handler)
-    }
-
     /// Run the application with the event loop on the calling thread.
     ///
     /// See the [`set_control_flow()`] docs on how to change the event loop's behavior.
@@ -313,29 +289,6 @@ impl<T> EventLoop<T> {
             .window_target()
             .p
             .set_control_flow(control_flow)
-    }
-
-    /// Create a window.
-    ///
-    /// Creating window without event loop running often leads to improper window creation;
-    /// use [`ActiveEventLoop::create_window`] instead.
-    #[deprecated = "use `ActiveEventLoop::create_window` instead"]
-    #[inline]
-    pub fn create_window(
-        &self,
-        window_attributes: WindowAttributes,
-    ) -> Result<Window, OsError> {
-        let _span = tracing::debug_span!(
-            "rio_window::EventLoop::create_window",
-            window_attributes = ?window_attributes
-        )
-        .entered();
-
-        let window = platform_impl::Window::new(
-            &self.event_loop.window_target().p,
-            window_attributes,
-        )?;
-        Ok(Window { window })
     }
 
     /// Create custom cursor.

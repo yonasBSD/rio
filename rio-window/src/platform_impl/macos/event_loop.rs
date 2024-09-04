@@ -1,14 +1,3 @@
-use std::any::Any;
-use std::cell::Cell;
-use std::collections::VecDeque;
-use std::marker::PhantomData;
-use std::os::raw::c_void;
-use std::panic::{catch_unwind, resume_unwind, RefUnwindSafe, UnwindSafe};
-use std::ptr;
-use std::rc::{Rc, Weak};
-use std::sync::mpsc;
-use std::time::{Duration, Instant};
-
 use core_foundation::base::{CFIndex, CFRelease};
 use core_foundation::runloop::{
     kCFRunLoopCommonModes, CFRunLoopAddSource, CFRunLoopGetMain, CFRunLoopSourceContext,
@@ -19,6 +8,15 @@ use objc2::runtime::ProtocolObject;
 use objc2::{msg_send_id, ClassType};
 use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSObjectProtocol};
+use std::any::Any;
+use std::cell::Cell;
+use std::collections::VecDeque;
+use std::marker::PhantomData;
+use std::os::raw::c_void;
+use std::panic::{catch_unwind, resume_unwind, RefUnwindSafe, UnwindSafe};
+use std::ptr;
+use std::rc::{Rc, Weak};
+use std::sync::mpsc;
 
 use super::app::WinitApplication;
 use super::app_delegate::{ApplicationDelegate, HandlePendingUserEvents};
@@ -31,7 +29,6 @@ use crate::event_loop::{
     ActiveEventLoop as RootWindowTarget, ControlFlow, DeviceEvents, EventLoopClosed,
 };
 use crate::platform::macos::ActivationPolicy;
-use crate::platform::pump_events::PumpStatus;
 use crate::platform_impl::platform::cursor::CustomCursor;
 use crate::window::{CustomCursor as RootCustomCursor, CustomCursorSource};
 
@@ -124,10 +121,6 @@ impl ActiveEventLoop {
 
     pub(crate) fn exit(&self) {
         self.delegate.exit()
-    }
-
-    pub(crate) fn clear_exit(&self) {
-        self.delegate.clear_exit()
     }
 
     pub(crate) fn exiting(&self) -> bool {
@@ -308,76 +301,6 @@ impl<T> EventLoop<T> {
         });
 
         Ok(())
-    }
-
-    pub fn pump_events<F>(&mut self, timeout: Option<Duration>, handler: F) -> PumpStatus
-    where
-        F: FnMut(Event<T>, &RootWindowTarget),
-    {
-        let handler = map_user_event(handler, self.receiver.clone());
-
-        self.delegate.set_event_handler(handler, || {
-            autoreleasepool(|_| {
-                // As a special case, if the application hasn't been launched yet then we at least
-                // run the loop until it has fully launched.
-                if !self.delegate.is_launched() {
-                    debug_assert!(!self.delegate.is_running());
-
-                    self.delegate.set_stop_on_launch();
-                    // SAFETY: We do not run the application re-entrantly
-                    unsafe { self.app.run() };
-
-                    // Note: we dispatch `NewEvents(Init)` + `Resumed` events after the application
-                    // has launched
-                } else if !self.delegate.is_running() {
-                    // Even though the application may have been launched, it's possible we aren't
-                    // running if the `EventLoop` was run before and has since
-                    // exited. This indicates that we just starting to re-run
-                    // the same `EventLoop` again.
-                    self.delegate.set_is_running(true);
-                    self.delegate.dispatch_init_events();
-                } else {
-                    // Only run for as long as the given `Duration` allows so we don't block the
-                    // external loop.
-                    match timeout {
-                        Some(Duration::ZERO) => {
-                            self.delegate.set_wait_timeout(None);
-                            self.delegate.set_stop_before_wait(true);
-                        }
-                        Some(duration) => {
-                            self.delegate.set_stop_before_wait(false);
-                            let timeout = Instant::now() + duration;
-                            self.delegate.set_wait_timeout(Some(timeout));
-                            self.delegate.set_stop_after_wait(true);
-                        }
-                        None => {
-                            self.delegate.set_wait_timeout(None);
-                            self.delegate.set_stop_before_wait(false);
-                            self.delegate.set_stop_after_wait(true);
-                        }
-                    }
-                    self.delegate.set_stop_on_redraw(true);
-                    // SAFETY: We do not run the application re-entrantly
-                    unsafe { self.app.run() };
-                }
-
-                // While the app is running it's possible that we catch a panic
-                // to avoid unwinding across an objective-c ffi boundary, which
-                // will lead to us stopping the application and saving the
-                // `PanicInfo` so that we can resume the unwind at a controlled,
-                // safe point in time.
-                if let Some(panic) = self.panic_info.take() {
-                    resume_unwind(panic);
-                }
-
-                if self.delegate.exiting() {
-                    self.delegate.internal_exit();
-                    PumpStatus::Exit(0)
-                } else {
-                    PumpStatus::Continue
-                }
-            })
-        })
     }
 
     pub fn create_proxy(&self) -> EventLoopProxy<T> {
