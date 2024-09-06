@@ -9,7 +9,26 @@ language: 'en'
 
 <!-- - Fix: MacOS Delete key doesn't work in kitty mode [#513](https://github.com/raphamorim/rio/issues/513). -->
 <!-- - Fix: Kitty keyboard protocol doesn't work with tmux [#599](https://github.com/raphamorim/rio/issues/599). -->
+- Fix: Cursor making text with ligatures hidden.
+- Fix: Underline cursor not working.
+- Fix:  sixel: Text doesn't overwrite sixels [#636](https://github.com/raphamorim/rio/issues/636).
 - Initial support to Sixel protocol.
+- **breaking:** Revamp the cursor configuration
+
+Before:
+
+```toml
+cursor = '▇'
+blinking-cursor = false
+```
+
+After:
+
+```toml
+[cursor]
+shape = 'block'
+blinking = false
+```
 
 ## 0.1.11
 

@@ -104,7 +104,7 @@ impl Renderer {
             is_vi_mode_enabled: false,
             is_blinking: false,
             last_typing: None,
-            config_has_blinking_enabled: config.blinking_cursor,
+            config_has_blinking_enabled: config.cursor.blinking,
             term_has_blinking_enabled: false,
             ignore_selection_fg_color: config.ignore_selection_fg_color,
             colors,
@@ -120,9 +120,9 @@ impl Renderer {
             dynamic_background,
             active_search: None,
             cursor: Cursor {
-                content: config.cursor,
-                content_ref: config.cursor,
-                state: CursorState::new(config.cursor),
+                content: config.cursor.shape.into(),
+                content_ref: config.cursor.shape.into(),
+                state: CursorState::new(config.cursor.shape.into()),
             },
             width_cache: FxHashMap::default(),
         }
@@ -204,7 +204,7 @@ impl Renderer {
             Some(background_color)
         };
 
-        let (decoration, decoration_color) = self.compute_decoration(square, false);
+        let (decoration, decoration_color) = self.compute_decoration(square);
 
         (
             FragmentStyle {
@@ -223,20 +223,17 @@ impl Renderer {
     fn compute_decoration(
         &self,
         square: &Square,
-        skip_underline: bool,
     ) -> (Option<FragmentStyleDecoration>, Option<[f32; 4]>) {
         let mut decoration = None;
         let mut decoration_color = None;
 
         if square.flags.contains(Flags::UNDERLINE) {
-            if !skip_underline {
-                decoration = Some(FragmentStyleDecoration::Underline(UnderlineInfo {
-                    offset: -1.0,
-                    size: 1.0,
-                    is_doubled: false,
-                    shape: UnderlineShape::Regular,
-                }));
-            }
+            decoration = Some(FragmentStyleDecoration::Underline(UnderlineInfo {
+                offset: -1.0,
+                size: 1.0,
+                is_doubled: false,
+                shape: UnderlineShape::Regular,
+            }));
         } else if square.flags.contains(Flags::STRIKEOUT) {
             decoration = Some(FragmentStyleDecoration::Strikethrough);
         } else if square.flags.contains(Flags::DOUBLE_UNDERLINE) {
@@ -306,26 +303,6 @@ impl Renderer {
                     self.create_style(square)
                 };
 
-            if square.flags.contains(Flags::GRAPHICS) {
-                // let graphics = square.graphics().map(|graphics| {
-                //     graphics
-                //         .iter()
-                //         .map(|graphic| Graphic {
-                //             id: graphic.texture.id,
-                //             offset_x: graphic.offset_x,
-                //             offset_y: graphic.offset_y,
-                //         })
-                //         .collect::<_>()
-                // });
-                // style.media = Some(graphics);
-                let graphic = &square.graphics().unwrap()[0];
-                style.media = Some(Graphic {
-                    id: graphic.texture.id,
-                    offset_x: graphic.offset_x,
-                    offset_y: graphic.offset_y,
-                });
-            }
-
             if self.hyperlink_range.is_some()
                 && square.hyperlink().is_some()
                 && self
@@ -369,6 +346,27 @@ impl Renderer {
                     style.background_color =
                         Some(self.named_colors.search_match_background);
                 }
+            }
+
+            if square.flags.contains(Flags::GRAPHICS) {
+                // let graphics = square.graphics().map(|graphics| {
+                //     graphics
+                //         .iter()
+                //         .map(|graphic| Graphic {
+                //             id: graphic.texture.id,
+                //             offset_x: graphic.offset_x,
+                //             offset_y: graphic.offset_y,
+                //         })
+                //         .collect::<_>()
+                // });
+                // style.media = Some(graphics);
+                let graphic = &square.graphics().unwrap()[0];
+                style.media = Some(Graphic {
+                    id: graphic.texture.id,
+                    offset_x: graphic.offset_x,
+                    offset_y: graphic.offset_y,
+                });
+                style.background_color = None;
             }
 
             if last_style != style {
@@ -582,20 +580,20 @@ impl Renderer {
             self.named_colors.vi_cursor
         };
 
-        let mut has_underline_cursor = false;
+        let (decoration, decoration_color) = self.compute_decoration(square);
+        style.decoration = decoration;
+        style.decoration_color = decoration_color;
 
         match self.cursor.state.content {
             CursorShape::Underline => {
                 style.decoration =
                     Some(FragmentStyleDecoration::Underline(UnderlineInfo {
-                        offset: -1.0,
-                        size: -1.0,
+                        offset: 0.0,
+                        size: 3.0,
                         is_doubled: false,
                         shape: UnderlineShape::Regular,
                     }));
                 style.decoration_color = Some(cursor_color);
-
-                has_underline_cursor = true;
             }
             CursorShape::Block => {
                 style.cursor = Some(SugarCursor::Block(cursor_color));
@@ -605,11 +603,6 @@ impl Renderer {
             }
             CursorShape::Hidden => {}
         }
-
-        let (decoration, decoration_color) =
-            self.compute_decoration(square, has_underline_cursor);
-        style.decoration = decoration;
-        style.decoration_color = decoration_color;
 
         (style, content)
     }
