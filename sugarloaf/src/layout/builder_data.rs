@@ -9,11 +9,11 @@
 // This file had updates to support color, underline_color, background_color
 // and other functionalities
 
+use crate::font_introspector::text::cluster::CharInfo;
+use crate::font_introspector::Attributes;
+use crate::font_introspector::Setting;
 use crate::{sugarloaf::primitives::SugarCursor, Graphic};
 use std::hash::{Hash, Hasher};
-use swash::text::cluster::CharInfo;
-use swash::Setting;
-use swash::{Stretch, Style, Weight};
 
 /// Data that describes a fragment.
 #[derive(Copy, Debug, Clone)]
@@ -197,7 +197,7 @@ pub struct FragmentStyle {
     //  Unicode width
     pub width: f32,
     /// Font attributes.
-    pub font_attrs: (Stretch, Weight, Style),
+    pub font_attrs: Attributes,
     /// Font color.
     pub color: [f32; 4],
     /// Background color.
@@ -205,11 +205,11 @@ pub struct FragmentStyle {
     /// Font variations.
     pub font_vars: FontSettingKey,
     /// Additional spacing between letters (clusters) of text.
-    pub letter_spacing: f32,
+    // pub letter_spacing: f32,
     /// Additional spacing between words of text.
-    pub word_spacing: f32,
+    // pub word_spacing: f32,
     /// Multiplicative line spacing factor.
-    pub line_spacing: f32,
+    // pub line_spacing: f32,
     /// Enable underline decoration.
     pub decoration: Option<FragmentStyleDecoration>,
     /// Decoration color.
@@ -224,11 +224,11 @@ impl Default for FragmentStyle {
     fn default() -> Self {
         Self {
             width: 1.0,
-            font_attrs: (Stretch::NORMAL, Weight::NORMAL, Style::Normal),
+            font_attrs: Attributes::default(),
             font_vars: EMPTY_FONT_SETTINGS,
-            letter_spacing: 0.,
-            word_spacing: 0.,
-            line_spacing: 1.,
+            // letter_spacing: 0.,
+            // word_spacing: 0.,
+            // line_spacing: 1.,
             color: [1.0, 1.0, 1.0, 1.0],
             background_color: None,
             cursor: None,
@@ -242,14 +242,7 @@ impl Default for FragmentStyle {
 impl Hash for FragmentStyle {
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.font_attrs.0.hash(state);
-        self.font_attrs.1.hash(state);
-        match self.font_attrs.2 {
-            swash::Style::Normal => 0.hash(state),
-            swash::Style::Italic => 1.hash(state),
-            swash::Style::Oblique(_) => 2.hash(state),
-        };
-
+        self.font_attrs.hash(state);
         self.color[0].to_bits().hash(state);
         self.color[1].to_bits().hash(state);
         self.color[2].to_bits().hash(state);

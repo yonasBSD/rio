@@ -438,7 +438,7 @@ impl DrawLayoutCache {
 
     #[inline]
     fn clear_on_demand(&mut self) {
-        if self.inner.len() > 128 {
+        if self.inner.len() > 640 {
             self.inner.clear();
         }
     }
