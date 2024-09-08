@@ -18,23 +18,23 @@ use crate::font_introspector::text::cluster::{CharCluster, CharInfo, Parser, Tok
 use crate::font_introspector::text::{analyze, Script};
 use crate::font_introspector::{Setting, Synthesis};
 use crate::layout::render_data::{RenderData, RunCacheEntry};
-use rustc_hash::FxHashMap;
-use std::path::PathBuf;
+use lru::LruCache;
+use std::num::NonZeroUsize;
 
 pub struct RunCache {
-    inner: FxHashMap<u64, RunCacheEntry>,
+    inner: LruCache<u64, RunCacheEntry>,
 }
 
 impl RunCache {
     #[inline]
     fn new() -> Self {
         Self {
-            inner: FxHashMap::default(),
+            inner: LruCache::new(NonZeroUsize::new(256).unwrap()),
         }
     }
 
     #[inline]
-    fn insert(&mut self, line_hash: u64, data: RunCacheEntry) {
+    fn put(&mut self, line_hash: u64, data: RunCacheEntry) {
         if data.runs.is_empty() {
             return;
         }
@@ -42,17 +42,7 @@ impl RunCache {
         if let Some(line) = self.inner.get_mut(&line_hash) {
             *line = data;
         } else {
-            self.inner.insert(line_hash, data);
-        }
-    }
-
-    #[inline]
-    fn clear_on_max_capacity(&mut self) -> bool {
-        if self.inner.len() > 512 {
-            self.inner.clear();
-            true
-        } else {
-            false
+            self.inner.put(line_hash, data);
         }
     }
 }
@@ -65,9 +55,8 @@ pub struct LayoutContext {
     scx: ShapeContext,
     state: BuilderState,
     cache: RunCache,
-    cache_analysis: FxHashMap<String, Vec<CharInfo>>,
+    cache_analysis: LruCache<String, Vec<CharInfo>>,
     shaper_cache: ShaperCache,
-    fonts_to_load: Vec<(usize, PathBuf)>,
 }
 
 impl LayoutContext {
@@ -79,10 +68,9 @@ impl LayoutContext {
             scx: ShapeContext::new(),
             state: BuilderState::new(),
             cache: RunCache::new(),
-            shaper_cache: ShaperCache::default(),
-            fonts_to_load: vec![],
+            shaper_cache: ShaperCache::new(),
             font_features: vec![],
-            cache_analysis: FxHashMap::default(),
+            cache_analysis: LruCache::new(NonZeroUsize::new(256).unwrap()),
         }
     }
 
@@ -111,6 +99,7 @@ impl LayoutContext {
 
         if prev_font_size != self.state.font_size {
             self.cache.inner.clear();
+            self.shaper_cache.clear();
         }
         ParagraphBuilder {
             fcx: &mut self.fcx,
@@ -124,7 +113,6 @@ impl LayoutContext {
             cache: &mut self.cache,
             shaper_cache: &mut self.shaper_cache,
             cache_analysis: &mut self.cache_analysis,
-            fonts_to_load: &mut self.fonts_to_load,
         }
     }
 
@@ -144,8 +132,7 @@ pub struct ParagraphBuilder<'a> {
     last_offset: u32,
     cache: &'a mut RunCache,
     shaper_cache: &'a mut ShaperCache,
-    cache_analysis: &'a mut FxHashMap<String, Vec<CharInfo>>,
-    fonts_to_load: &'a mut Vec<(usize, PathBuf)>,
+    cache_analysis: &'a mut LruCache<String, Vec<CharInfo>>,
 }
 
 impl<'a> ParagraphBuilder<'a> {
@@ -252,9 +239,6 @@ impl<'a> ParagraphBuilder<'a> {
     }
 
     fn resolve(&mut self, render_data: &mut RenderData) {
-        // Cache needs to be cleaned before build lines
-        let should_clear = self.cache.clear_on_max_capacity();
-
         // let start = std::time::Instant::now();
         for line_number in 0..self.s.lines.len() {
             // In case should render only requested lines
@@ -276,7 +260,7 @@ impl<'a> ParagraphBuilder<'a> {
                     line.text.info.push(char_info);
                     cache.push(char_info);
                 }
-                self.cache_analysis.insert(content_key, cache);
+                self.cache_analysis.put(content_key, cache);
             }
 
             self.itemize(line_number);
@@ -287,29 +271,6 @@ impl<'a> ParagraphBuilder<'a> {
         }
         // let duration = start.elapsed();
         // println!("Time elapsed in resolve is: {:?}", duration);
-
-        // In this case, we actually have found fonts that have not been loaded yet
-        // We need to load and then restart the whole resolve function again
-        if !self.fonts_to_load.is_empty() {
-            {
-                let font_library = { &mut self.fonts.inner.write().unwrap() };
-                while let Some(font_to_load) = self.fonts_to_load.pop() {
-                    let (font_id, path) = font_to_load;
-                    font_library.upsert(font_id, path);
-                }
-            }
-
-            *render_data = RenderData::default();
-            self.cache.inner.clear();
-            for line_number in 0..self.s.lines.len() {
-                self.shape(render_data, line_number);
-            }
-        };
-
-        if should_clear {
-            self.shaper_cache.clear();
-            self.cache_analysis.clear();
-        }
     }
 
     #[inline]
@@ -420,7 +381,6 @@ impl<'a> ParagraphBuilder<'a> {
                 &mut char_cluster,
                 &mut shape_state.synth,
                 font_library,
-                self.fonts_to_load,
                 &style,
             );
 
@@ -431,14 +391,12 @@ impl<'a> ParagraphBuilder<'a> {
                 &mut shape_state,
                 &mut parser,
                 &mut char_cluster,
-                // dir,
                 render_data,
                 current_line,
-                self.fonts_to_load,
                 self.shaper_cache,
             ) {}
 
-            self.cache.insert(
+            self.cache.put(
                 self.s.lines[current_line].hash,
                 render_data.last_cached_run.to_owned(),
             );
@@ -459,16 +417,23 @@ struct ShapeState<'a> {
     size: f32,
 }
 
-#[derive(Default)]
 pub struct ShaperCache {
-    pub inner: FxHashMap<String, Vec<OwnedGlyphCluster>>,
+    pub inner: LruCache<String, Vec<OwnedGlyphCluster>>,
     stash: Vec<OwnedGlyphCluster>,
     key: String,
 }
 
 impl ShaperCache {
+    pub fn new() -> Self {
+        ShaperCache {
+            inner: LruCache::new(NonZeroUsize::new(256).unwrap()),
+            stash: vec![],
+            key: String::new(),
+        }
+    }
+
     #[inline]
-    pub fn shape_with(&self) -> Option<&Vec<OwnedGlyphCluster>> {
+    pub fn shape_with(&mut self) -> Option<&Vec<OwnedGlyphCluster>> {
         if self.key.is_empty() {
             return None;
         }
@@ -487,6 +452,7 @@ impl ShaperCache {
     pub fn clear(&mut self) {
         self.stash.clear();
         self.key.clear();
+        self.inner.clear();
     }
 
     #[inline]
@@ -497,7 +463,7 @@ impl ShaperCache {
     #[inline]
     pub fn finish(&mut self) {
         if !self.key.is_empty() && !self.stash.is_empty() {
-            self.inner.insert(
+            self.inner.put(
                 std::mem::take(&mut self.key),
                 std::mem::take(&mut self.stash),
             );
@@ -518,7 +484,6 @@ fn shape_clusters<I>(
     cluster: &mut CharCluster,
     render_data: &mut RenderData,
     current_line: usize,
-    fonts_to_load: &mut Vec<(usize, PathBuf)>,
     shaper_cache: &mut ShaperCache,
 ) -> bool
 where
@@ -556,8 +521,7 @@ where
             return false;
         }
 
-        let next_font =
-            fcx.map_cluster(cluster, &mut synth, fonts, fonts_to_load, state.span);
+        let next_font = fcx.map_cluster(cluster, &mut synth, fonts, state.span);
         if next_font != state.font_id || synth != state.synth {
             render_data.push_run(
                 state.span,
