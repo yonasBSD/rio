@@ -379,11 +379,8 @@ impl Screen<'_> {
     ) -> &mut Self {
         self.sugarloaf.rescale(new_scale);
         self.sugarloaf.resize(new_size.width, new_size.height);
-        // TODO: Fix this double render hack on scale update
         self.render();
         self.resize_all_contexts();
-
-        self.render();
 
         self
     }
@@ -1279,16 +1276,20 @@ impl Screen<'_> {
             let main_fd = *self.ctx().current().main_fd;
             let shell_pid = &self.ctx().current().shell_pid;
             match teletypewriter::spawn_daemon(program, args, main_fd, *shell_pid) {
-                Ok(_) => log::debug!("Launched {} with args {:?}", program, args),
-                Err(_) => log::warn!("Unable to launch {} with args {:?}", program, args),
+                Ok(_) => tracing::debug!("Launched {} with args {:?}", program, args),
+                Err(_) => {
+                    tracing::warn!("Unable to launch {} with args {:?}", program, args)
+                }
             }
         }
 
         #[cfg(windows)]
         {
             match teletypewriter::spawn_daemon(program, args) {
-                Ok(_) => log::debug!("Launched {} with args {:?}", program, args),
-                Err(_) => log::warn!("Unable to launch {} with args {:?}", program, args),
+                Ok(_) => tracing::debug!("Launched {} with args {:?}", program, args),
+                Err(_) => {
+                    tracing::warn!("Unable to launch {} with args {:?}", program, args)
+                }
             }
         }
     }
