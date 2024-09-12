@@ -9,6 +9,11 @@ language: 'en'
 
 <!-- - Fix: MacOS Delete key doesn't work in kitty mode [#513](https://github.com/raphamorim/rio/issues/513). -->
 <!-- - Fix: Kitty keyboard protocol doesn't work with tmux [#599](https://github.com/raphamorim/rio/issues/599). -->
+- MacOS does not clear with background operation anymore, instead it relies on window background.
+- Background color has changed to `#0F0D0E`.
+- Default navigation on MacOS is now `NativeTab` with `window.decorations = "transparent"`.
+- Default navigation on Linux/BSD/Windows is now BottomTab.
+- Fix font emoji width.
 
 ## 0.1.13
 

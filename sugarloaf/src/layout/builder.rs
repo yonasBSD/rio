@@ -284,7 +284,7 @@ impl LayoutContext {
 
         if prev_font_size != self.state.font_size {
             // self.cache.inner.clear();
-            self.word_cache.clear();
+            self.metrics_cache.inner.clear();
         }
         ParagraphBuilder {
             fcx: &mut self.fcx,
@@ -299,11 +299,6 @@ impl LayoutContext {
             metrics_cache: &mut self.metrics_cache,
             cache_analysis: &mut self.cache_analysis,
         }
-    }
-
-    #[inline]
-    pub fn clear_cache(&mut self) {
-        // self.cache.inner.clear();
     }
 }
 
@@ -432,8 +427,8 @@ impl<'a> ParagraphBuilder<'a> {
             .iter()
             .collect();
             if let Some(shaper) = self.word_cache.inner.get(&shaper_key) {
-                if let Some(font_id) = self.fcx.find_font_by_str(
-                    &shaper_key,
+                if let Some(font_id) = self.fcx.find_font_by_character(
+                    self.s.lines[current_line].text.content[item.start],
                     &mut shape_state.synth,
                     font_library,
                     &style,
@@ -524,13 +519,6 @@ impl WordCache {
     }
 
     #[inline]
-    pub fn clear(&mut self) {
-        self.stash.clear();
-        self.key.clear();
-        self.inner.clear();
-    }
-
-    #[inline]
     pub fn add_glyph_cluster(&mut self, glyph_cluster: &GlyphCluster) {
         self.stash.push(glyph_cluster.into());
     }
@@ -545,15 +533,18 @@ impl WordCache {
     #[inline]
     pub fn finish(&mut self) {
         // println!("{:?} {:?}", self.key, self.inner.len());
-        if !self.key.is_empty() && !self.stash.is_empty() {
+        if !self.key.is_empty()
+            && !self.stash.is_empty()
+            && self.inner.get(&self.key).is_none()
+        {
             self.inner.put(
                 std::mem::take(&mut self.key),
                 std::mem::take(&mut self.stash),
             );
-        } else {
-            self.stash.clear();
-            self.key.clear();
+            return;
         }
+        self.stash.clear();
+        self.key.clear();
     }
 }
 

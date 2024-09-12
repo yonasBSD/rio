@@ -10,6 +10,8 @@ use core::borrow::Borrow;
 use core::hash::{Hash, Hasher};
 use rustc_hash::FxHashMap;
 
+// const IS_MACOS: bool = cfg!(target_os = "macos");
+
 const SOURCES: &[Source] = &[
     Source::ColorOutline(0),
     Source::ColorBitmap(StrikeWith::BestFit),
@@ -48,6 +50,11 @@ impl GlyphCache {
         let scaler = self
             .scx
             .builder(font)
+            // With the advent of high-DPI displays (displays with >300 pixels per inch),
+            // font hinting has become less relevant, as aliasing effects become
+            // un-noticeable to the human eye.
+            // As a result Apple's Quartz text renderer, which is targeted for Retina displays,
+            // now ignores font hint information completely.
             // .hint(!IS_MACOS)
             .hint(true)
             .size(size)

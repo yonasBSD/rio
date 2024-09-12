@@ -111,7 +111,7 @@ pub fn create_window_builder(
     window_builder
 }
 
-pub fn configure_window(winit_window: Window, config: &Config) -> Window {
+pub fn configure_window(winit_window: &Window, config: &Config) {
     let current_mouse_cursor = CursorIcon::Text;
     winit_window.set_cursor(current_mouse_cursor);
 
@@ -148,10 +148,15 @@ pub fn configure_window(winit_window: Window, config: &Config) -> Window {
     #[cfg(target_os = "macos")]
     {
         use rio_window::platform::macos::WindowExtMacOS;
+        let bg_color = config.colors.background.1;
+        winit_window.set_background_color(
+            bg_color.r,
+            bg_color.g,
+            bg_color.b,
+            config.window.opacity as f64,
+        );
         winit_window.set_has_shadow(!is_transparent);
     }
 
     winit_window.set_blur(config.window.blur);
-
-    winit_window
 }
