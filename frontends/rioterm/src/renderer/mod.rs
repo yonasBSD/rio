@@ -16,8 +16,8 @@ use rio_backend::config::colors::{
 };
 use rio_backend::config::Config;
 use rio_backend::sugarloaf::{
-    Content, ContentBuilder, FragmentStyle, FragmentStyleDecoration, Graphic, Stretch,
-    Style, SugarCursor, Sugarloaf, UnderlineInfo, UnderlineShape, Weight,
+    Content, FragmentStyle, FragmentStyleDecoration, Graphic, Stretch, Style,
+    SugarCursor, Sugarloaf, UnderlineInfo, UnderlineShape, Weight,
 };
 use rio_window::window::Theme;
 use std::collections::HashMap;
@@ -54,12 +54,20 @@ pub struct Renderer {
     // the same r,g,b with the mutated alpha channel.
     pub dynamic_background: ([f32; 4], wgpu::Color, bool),
     hyperlink_range: Option<SelectionRange>,
-    width_cache: FxHashMap<char, f32>,
     active_search: Option<String>,
+    font_context: rio_backend::sugarloaf::font::FontLibrary,
+    font_cache: FxHashMap<
+        (char, rio_backend::sugarloaf::font_introspector::Attributes),
+        (usize, f32),
+    >,
 }
 
 impl Renderer {
-    pub fn new(config: &Config, current_theme: Option<Theme>) -> Renderer {
+    pub fn new(
+        config: &Config,
+        current_theme: Option<Theme>,
+        font_context: &rio_backend::sugarloaf::font::FontLibrary,
+    ) -> Renderer {
         let term_colors = TermColors::default();
         let colors = List::from(&term_colors);
         let mut named_colors = config.colors;
@@ -124,7 +132,8 @@ impl Renderer {
                 content_ref: config.cursor.shape.into(),
                 state: CursorState::new(config.cursor.shape.into()),
             },
-            width_cache: FxHashMap::default(),
+            font_cache: FxHashMap::default(),
+            font_context: font_context.clone(),
         }
     }
 
@@ -171,14 +180,6 @@ impl Renderer {
             square.c
         };
 
-        let width = if let Some(w) = self.width_cache.get(&content) {
-            *w
-        } else {
-            let w = square.c.width().unwrap_or(1) as f32;
-            self.width_cache.insert(square.c, w);
-            w
-        };
-
         let font_attrs = match (
             flags.contains(Flags::ITALIC),
             flags.contains(Flags::BOLD_ITALIC),
@@ -208,7 +209,6 @@ impl Renderer {
 
         (
             FragmentStyle {
-                width,
                 color: foreground_color,
                 background_color,
                 font_attrs: font_attrs.into(),
@@ -279,7 +279,7 @@ impl Renderer {
     #[inline]
     fn create_line(
         &mut self,
-        content_builder: &mut ContentBuilder,
+        content_builder: &mut Content,
         row: &Row<Square>,
         has_cursor: bool,
         line: Line,
@@ -371,6 +371,40 @@ impl Renderer {
                 style.background_color = None;
             }
 
+            if let Some((font_id, width)) =
+                self.font_cache.get(&(square_content, style.font_attrs))
+            {
+                style.font_id = *font_id;
+                style.width = *width;
+            } else {
+                let mut width = square.c.width().unwrap_or(1) as f32;
+                let mut font_ctx = self.font_context.inner.lock();
+
+                // There is no simple way to define what's emoji
+                // could have to refer to the Unicode tables. However it could
+                // be leading to misleading results. For example if we used
+                // unicode and internationalization functionalities like
+                // https://github.com/open-i18n/rust-unic/, then characters
+                // like "◼" would be valid emojis. For a terminal context,
+                // the character "◼" is not an emoji and should be treated as
+                // single width. So, we completely rely on what font is
+                // being used and then set width 2 for it.
+                if let Some((font_id, is_emoji)) =
+                    font_ctx.find_best_font_match(square_content, &style)
+                {
+                    style.font_id = font_id;
+                    if is_emoji {
+                        width = 2.0;
+                    }
+                }
+                style.width = width;
+
+                self.font_cache.insert(
+                    (square_content, style.font_attrs),
+                    (style.font_id, style.width),
+                );
+            };
+
             // TODO: Write tests for it
             if square_content != ' ' && last_char_was_empty {
                 if !content.is_empty() {
@@ -416,7 +450,7 @@ impl Renderer {
             }
         }
 
-        content_builder.finish_line();
+        content_builder.new_line();
     }
 
     #[inline]
@@ -692,13 +726,13 @@ impl Renderer {
             }
         }
 
-        let mut content_builder = Content::builder();
+        let content = sugarloaf.content();
 
         // let start = std::time::Instant::now();
         for (i, row) in rows.iter().enumerate() {
             let has_cursor = is_cursor_visible && self.cursor.state.pos.row == i;
             self.create_line(
-                &mut content_builder,
+                content,
                 row,
                 has_cursor,
                 Line((i as i32) - display_offset),
@@ -708,8 +742,6 @@ impl Renderer {
         }
         // let duration = start.elapsed();
         // println!("Total loop rows: {:?}", duration);
-
-        sugarloaf.set_content(content_builder.build());
 
         let mut objects = Vec::with_capacity(30);
         self.navigation.build_objects(

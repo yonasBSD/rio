@@ -14,8 +14,8 @@ use super::layout_data::*;
 use crate::font_introspector::shape::cluster::OwnedGlyphCluster;
 use crate::font_introspector::shape::{cluster::Glyph as ShapedGlyph, Shaper};
 use crate::font_introspector::text::cluster::ClusterInfo;
+use crate::font_introspector::GlyphId;
 use crate::font_introspector::Metrics;
-use crate::font_introspector::{GlyphId, NormalizedCoord};
 use crate::layout::builder::{FragmentStyleDecoration, WordCache};
 use crate::layout::FragmentStyle;
 use crate::sugarloaf::primitives::SugarCursor;
@@ -77,18 +77,12 @@ impl RenderData {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn push_run(
         &mut self,
-        style: &FragmentStyle,
-        font: &usize,
+        style: FragmentStyle,
         size: f32,
         line: u32,
         shaper: Shaper<'_>,
         shaper_cache: &mut WordCache,
     ) {
-        let coords_start = self.data.coords.len() as u32;
-        let coords = shaper.normalized_coords().to_owned();
-        self.data.coords.extend_from_slice(&coords);
-
-        let coords_end = self.data.coords.len() as u32;
         let clusters_start = self.data.clusters.len() as u32;
         let metrics = shaper.metrics();
 
@@ -177,10 +171,8 @@ impl RenderData {
         }
 
         let run_data = RunData {
-            span: *style,
+            span: style,
             line,
-            font: *font,
-            coords: (coords_start, coords_end),
             size,
             clusters: (clusters_start, clusters_end),
             // ascent: metrics.ascent * span_data.line_spacing,
@@ -199,20 +191,14 @@ impl RenderData {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn push_run_without_shaper(
         &mut self,
-        style: &FragmentStyle,
-        font: usize,
+        style: FragmentStyle,
         size: f32,
         line: u32,
         glyph_clusters: &Vec<OwnedGlyphCluster>,
         metrics: &Metrics,
-        normalized_coords: &[i16],
     ) -> bool {
         // In case is a new line,
         // then needs to recompute the span index again
-        let coords_start = self.data.coords.len() as u32;
-        self.data.coords.extend_from_slice(normalized_coords);
-
-        let coords_end = self.data.coords.len() as u32;
         let clusters_start = self.data.clusters.len() as u32;
         let mut advance = 0.;
 
@@ -296,10 +282,8 @@ impl RenderData {
             self.graphics.insert(graphic.id);
         }
         let run_data = RunData {
-            span: *style,
+            span: style,
             line,
-            font,
-            coords: (coords_start, coords_end),
             size,
             clusters: (clusters_start, clusters_end),
             // ascent: metrics.ascent * span_data.line_spacing,
@@ -362,7 +346,7 @@ impl<'a> Run<'a> {
     /// Returns the font for the run.
     #[inline]
     pub fn font(&self) -> &usize {
-        &self.run.font
+        &self.run.span.font_id
     }
 
     /// Returns the font size for the run.
@@ -388,13 +372,13 @@ impl<'a> Run<'a> {
         self.run.span.cursor
     }
 
-    /// Returns the normalized variation coordinates for the run.
-    pub fn normalized_coords(&self) -> &'a [NormalizedCoord] {
-        self.layout
-            .coords
-            .get(make_range(self.run.coords))
-            .unwrap_or(&[])
-    }
+    // /// Returns the normalized variation coordinates for the run.
+    // pub fn normalized_coords(&self) -> &'a [NormalizedCoord] {
+    //     self.layout
+    //         .coords
+    //         .get(make_range(self.run.coords))
+    //         .unwrap_or(&[])
+    // }
 
     /// Returns the advance of the run.
     #[inline]

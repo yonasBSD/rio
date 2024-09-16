@@ -10,9 +10,9 @@ use crate::components::rich_text::RichTextBrush;
 use crate::components::text;
 use crate::font::{fonts::SugarloafFont, FontLibrary};
 use crate::layout::SugarloafLayout;
-use crate::sugarloaf::graphics::{BottomLayer, GraphicData, GraphicId, Graphics};
+use crate::sugarloaf::graphics::{BottomLayer, Graphics};
 use crate::sugarloaf::layer::types;
-use crate::{context::Context, Content, Object};
+use crate::{context::Context, Object};
 use ab_glyph::{self, PxScale};
 use core::fmt::{Debug, Formatter};
 use primitives::ImageProperties;
@@ -30,7 +30,7 @@ pub struct Sugarloaf<'a> {
     state: state::SugarState,
     pub background_color: Option<wgpu::Color>,
     pub background_image: Option<ImageProperties>,
-    graphics: Graphics,
+    pub graphics: Graphics,
 }
 
 #[derive(Debug)]
@@ -121,8 +121,8 @@ impl Sugarloaf<'_> {
         let ctx = Context::new(window, renderer);
 
         let text_brush = {
-            let data = { &font_library.inner.read().unwrap().ui };
-            text::GlyphBrushBuilder::using_fonts(vec![data.to_owned()])
+            let data = { font_library.inner.lock().ui.to_owned() };
+            text::GlyphBrushBuilder::using_fonts(vec![data])
                 .build(&ctx.device, ctx.format)
         };
 
@@ -166,13 +166,12 @@ impl Sugarloaf<'_> {
 
     #[inline]
     pub fn layout(&self) -> SugarloafLayout {
-        self.state.current.layout
+        self.state.layout
     }
 
     #[inline]
     pub fn layout_mut(&mut self) -> &mut SugarloafLayout {
-        self.state.mark_dirty();
-        &mut self.state.current.layout
+        &mut self.state.layout
     }
 
     #[inline]
@@ -205,13 +204,13 @@ impl Sugarloaf<'_> {
     }
 
     #[inline]
-    pub fn set_objects(&mut self, objects: Vec<Object>) {
-        self.state.compute_objects(objects);
+    pub fn content(&mut self) -> &mut crate::Content {
+        self.state.content()
     }
 
     #[inline]
-    pub fn set_content(&mut self, content: Content) {
-        self.state.set_content(content);
+    pub fn set_objects(&mut self, objects: Vec<Object>) {
+        self.state.compute_objects(objects);
     }
 
     #[inline]
@@ -246,21 +245,6 @@ impl Sugarloaf<'_> {
     #[inline]
     fn clean_state(&mut self) {
         self.state.clean_compositor();
-    }
-
-    #[inline]
-    pub fn add_graphic(&mut self, graphic_data: GraphicData) {
-        self.graphics.insert(graphic_data);
-    }
-
-    #[inline]
-    pub fn remove_graphic(&mut self, graphic_id: &GraphicId) {
-        self.graphics.remove(graphic_id);
-    }
-
-    #[inline]
-    pub fn mark_dirty(&mut self) {
-        self.state.mark_dirty();
     }
 
     #[inline]

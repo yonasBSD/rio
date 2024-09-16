@@ -2,21 +2,13 @@
 //
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
-//
-// layout_data.rs was originally retired from dfrg/swash_demo licensed under MIT
-// https://github.com/dfrg/swash_demo/blob/master/LICENSE
-//
-// This file had updates to support color, underline_color, background_color
-// and other functionalities
 
-use crate::font::{FontContext, FontLibrary, FontLibraryData};
+use crate::font::FontLibrary;
 use crate::font_introspector::shape::cluster::GlyphCluster;
 use crate::font_introspector::shape::cluster::OwnedGlyphCluster;
 use crate::font_introspector::shape::ShapeContext;
-use crate::font_introspector::text::cluster::{CharCluster, Parser, Token};
 use crate::font_introspector::text::Script;
 use crate::font_introspector::Metrics;
-use crate::font_introspector::Synthesis;
 use crate::layout::render_data::RenderData;
 use lru::LruCache;
 use rustc_hash::FxHashMap;
@@ -27,36 +19,17 @@ use crate::font_introspector::Setting;
 use crate::{sugarloaf::primitives::SugarCursor, Graphic};
 
 /// Data that describes a fragment.
-#[derive(Copy, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct FragmentData {
-    /// Offset of the text.
-    pub start: usize,
-    /// End of the text.
-    pub end: usize,
-    /// Font variations.
-    pub vars: FontSettingKey,
-}
-
-/// Builder Line State
-#[derive(Default)]
-pub struct BuilderLineText {
-    /// Combined text.
-    pub content: Vec<char>,
-    /// Fragment index per character.
-    pub frags: Vec<u32>,
-    /// Span index per character.
-    pub spans: Vec<usize>,
-    /// Offset of each character relative to its fragment.
-    pub offsets: Vec<u32>,
+    pub content: String,
+    /// Style
+    pub style: FragmentStyle,
 }
 
 #[derive(Default)]
 pub struct BuilderLine {
-    pub text: BuilderLineText,
     /// Collection of fragments.
     pub fragments: Vec<FragmentData>,
-    /// Span index per character.
-    pub styles: Vec<FragmentStyle>,
 }
 
 /// Builder state.
@@ -75,8 +48,7 @@ pub struct BuilderState {
 impl BuilderState {
     /// Creates a new layout state.
     pub fn new() -> Self {
-        let mut lines = vec![BuilderLine::default()];
-        lines[0].styles.push(FragmentStyle::default());
+        let lines = vec![BuilderLine::default()];
         Self {
             lines,
             ..BuilderState::default()
@@ -85,8 +57,6 @@ impl BuilderState {
     #[inline]
     pub fn new_line(&mut self) {
         self.lines.push(BuilderLine::default());
-        let last = self.lines.len() - 1;
-        self.lines[last].styles.push(FragmentStyle::default());
     }
     #[inline]
     pub fn current_line(&self) -> usize {
@@ -184,6 +154,7 @@ pub enum FragmentStyleDecoration {
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct FragmentStyle {
+    pub font_id: usize,
     //  Unicode width
     pub width: f32,
     /// Font attributes.
@@ -213,6 +184,7 @@ pub struct FragmentStyle {
 impl Default for FragmentStyle {
     fn default() -> Self {
         Self {
+            font_id: 0,
             width: 1.0,
             font_attrs: Attributes::default(),
             font_vars: EMPTY_FONT_SETTINGS,
@@ -230,8 +202,7 @@ impl Default for FragmentStyle {
 }
 
 /// Context for paragraph layout.
-pub struct LayoutContext {
-    fcx: FontContext,
+pub struct Content {
     fonts: FontLibrary,
     font_features: Vec<crate::font_introspector::Setting<u16>>,
     scx: ShapeContext,
@@ -240,12 +211,11 @@ pub struct LayoutContext {
     metrics_cache: MetricsCache,
 }
 
-impl LayoutContext {
+impl Content {
     /// Creates a new layout context with the specified font library.
     pub fn new(font_library: &FontLibrary) -> Self {
         Self {
             fonts: font_library.clone(),
-            fcx: FontContext::default(),
             scx: ShapeContext::new(),
             state: BuilderState::new(),
             word_cache: WordCache::new(),
@@ -267,10 +237,8 @@ impl LayoutContext {
         self.font_features = font_features;
     }
 
-    /// Creates a new builder for computing a paragraph layout with the
-    /// specified direction, language and scaling factor.
     #[inline]
-    pub fn builder(&mut self, scale: f32, font_size: f32) -> ParagraphBuilder {
+    pub fn build(&mut self, scale: f32, font_size: f32) {
         self.state.clear();
         self.state.begin();
         let prev_font_size = self.state.font_size;
@@ -278,206 +246,92 @@ impl LayoutContext {
         self.state.font_size = font_size * scale;
 
         if prev_font_size != self.state.font_size {
-            // self.cache.inner.clear();
             self.metrics_cache.inner.clear();
         }
-        ParagraphBuilder {
-            fcx: &mut self.fcx,
-            // bidi: &mut self.bidi,
-            // needs_bidi: false,
-            font_features: &self.font_features,
-            fonts: &self.fonts,
-            scx: &mut self.scx,
-            s: &mut self.state,
-            last_offset: 0,
-            word_cache: &mut self.word_cache,
-            metrics_cache: &mut self.metrics_cache,
-        }
+        // ContentBuilder {
+        //     font_features: &self.font_features,
+        //     fonts: &self.fonts,
+        //     scx: &mut self.scx,
+        //     s: &mut self.state,
+        //     word_cache: &mut self.word_cache,
+        //     metrics_cache: &mut self.metrics_cache,
+        // }
     }
-}
 
-/// Builder for computing the layout of a paragraph.
-pub struct ParagraphBuilder<'a> {
-    fcx: &'a mut FontContext,
-    fonts: &'a FontLibrary,
-    font_features: &'a Vec<crate::font_introspector::Setting<u16>>,
-    scx: &'a mut ShapeContext,
-    s: &'a mut BuilderState,
-    last_offset: u32,
-    word_cache: &'a mut WordCache,
-    metrics_cache: &'a mut MetricsCache,
-}
-
-impl<'a> ParagraphBuilder<'a> {
     #[inline]
     pub fn new_line(&mut self) {
-        self.s.new_line();
+        self.state.new_line();
     }
 
     /// Adds a text fragment to the paragraph.
     pub fn add_text(&mut self, text: &str, style: FragmentStyle) -> Option<()> {
-        let current_line = self.s.current_line();
-        let line = &mut self.s.lines[current_line];
-        let id = line.text.frags.len();
-        let mut offset = self.last_offset;
-        line.styles.push(style);
-        let span_id = line.styles.len() - 1;
-
-        let start = line.text.content.len();
-
-        for ch in text.chars() {
-            line.text.content.push(ch);
-            line.text.offsets.push(offset);
-            offset += (ch).len_utf8() as u32;
-        }
-
-        // println!(">>> {:?}", text);
-        let end = line.text.content.len();
-        let len = end - start;
-        line.text.frags.reserve(len);
-        for _ in 0..len {
-            line.text.frags.push(id as u32);
-        }
-
-        line.text.spans.reserve(len);
-        for _ in 0..len {
-            line.text.spans.push(span_id);
-        }
+        let current_line = self.state.current_line();
+        let line = &mut self.state.lines[current_line];
 
         line.fragments.push(FragmentData {
-            start,
-            end,
-            vars: style.font_vars,
+            content: text.to_string(),
+            style,
         });
 
-        self.last_offset = offset;
         Some(())
     }
 
-    /// Consumes the builder and fills the specified paragraph with the result.
-    pub fn build_into(mut self, render_data: &mut RenderData) {
-        self.resolve(render_data);
-    }
-
-    /// Consumes the builder and returns the resulting paragraph.
-    pub fn build(self) -> RenderData {
-        let mut render_data = RenderData::default();
-        self.build_into(&mut render_data);
-        render_data
-    }
-}
-
-impl<'a> ParagraphBuilder<'a> {
-    fn resolve(&mut self, render_data: &mut RenderData) {
-        // let start = std::time::Instant::now();
-        for line_number in 0..self.s.lines.len() {
-            // let start = std::time::Instant::now();
-            self.shape(render_data, line_number);
-            // let duration = start.elapsed();
-            // println!("Time elapsed in shape is: {:?}", duration);
-        }
-        // let duration = start.elapsed();
-        // println!("Time elapsed in resolve is: {:?}", duration);
-    }
-
     #[inline]
-    fn shape(&mut self, render_data: &mut RenderData, current_line: usize) {
-        let mut char_cluster = CharCluster::new();
-        let line = &self.s.lines[current_line];
-        let font_library = { &self.fonts.inner.read().unwrap() };
-        for item in &line.fragments {
-            let range = item.start..item.end;
-            let span_index = self.s.lines[current_line].text.spans[item.start];
-            let style = self.s.lines[current_line].styles[span_index];
-            let vars = self.s.vars.get(item.vars);
-            let mut shape_state = ShapeState {
-                script: Script::Latin,
-                features: self.font_features,
-                vars,
-                synth: Synthesis::default(),
-                span: &self.s.lines[current_line].styles[span_index],
-                font_id: None,
-                size: self.s.font_size,
-            };
+    pub fn resolve(&mut self, render_data: &mut RenderData) {
+        let script = Script::Latin;
+        for line_number in 0..self.state.lines.len() {
+            let line = &self.state.lines[line_number];
+            for item in &line.fragments {
+                let vars = self.state.vars.get(item.style.font_vars);
+                let shaper_key = &item.content;
 
-            let shaper_key: String = self.s.lines[current_line].text.content
-                [range.to_owned()]
-            .iter()
-            .collect();
-            if let Some(shaper) = self.word_cache.inner.get(&shaper_key) {
-                if let Some(font_id) = self.fcx.find_font_by_character(
-                    self.s.lines[current_line].text.content[item.start],
-                    &mut shape_state.synth,
-                    font_library,
-                    &style,
-                ) {
-                    if let Some((metrics, normalized_coords)) =
-                        self.metrics_cache.inner.get(&font_id)
+                // println!("{:?} -> {:?}", item.style.font_id, shaper_key);
+
+                if let Some(shaper) = self.word_cache.inner.get(shaper_key) {
+                    if let Some(metrics) =
+                        self.metrics_cache.inner.get(&item.style.font_id)
                     {
                         if render_data.push_run_without_shaper(
-                            shape_state.span,
-                            font_id,
-                            shape_state.size,
-                            current_line as u32,
+                            item.style,
+                            self.state.font_size,
+                            line_number as u32,
                             shaper,
                             metrics,
-                            normalized_coords,
                         ) {
                             continue;
                         }
                     }
                 }
+
+                self.word_cache.key = shaper_key.to_owned();
+                let font_library = { &self.fonts.inner.lock() };
+
+                let mut shaper = self
+                    .scx
+                    .builder(font_library[item.style.font_id].as_ref())
+                    .script(script)
+                    .size(self.state.font_size)
+                    .features(self.font_features.iter().copied())
+                    .variations(vars.iter().copied())
+                    .build();
+
+                shaper.add_str(&self.word_cache.key);
+
+                self.metrics_cache
+                    .inner
+                    .entry(item.style.font_id)
+                    .or_insert_with(|| shaper.metrics());
+
+                render_data.push_run(
+                    item.style,
+                    self.state.font_size,
+                    line_number as u32,
+                    shaper,
+                    &mut self.word_cache,
+                );
             }
-
-            let chars = self.s.lines[current_line].text.content[range.to_owned()]
-                .iter()
-                .zip(&self.s.lines[current_line].text.offsets[range.to_owned()])
-                .map(|z| {
-                    let (&ch, &offset) = z;
-                    Token {
-                        ch,
-                        offset,
-                        len: ch.len_utf8() as u8,
-                        info: ch.into(),
-                        data: 0,
-                    }
-                });
-
-            let mut parser = Parser::new(Script::Latin, chars);
-            if !parser.next(&mut char_cluster) {
-                continue;
-            }
-            shape_state.font_id = self.fcx.map_cluster(
-                &mut char_cluster,
-                &mut shape_state.synth,
-                font_library,
-                &style,
-            );
-
-            while shape_clusters(
-                self.fcx,
-                font_library,
-                self.scx,
-                &mut shape_state,
-                &mut parser,
-                &mut char_cluster,
-                render_data,
-                current_line,
-                self.word_cache,
-                self.metrics_cache,
-            ) {}
         }
     }
-}
-
-struct ShapeState<'a> {
-    features: &'a [Setting<u16>],
-    synth: Synthesis,
-    vars: &'a [Setting<f32>],
-    script: Script,
-    span: &'a FragmentStyle,
-    font_id: Option<usize>,
-    size: f32,
 }
 
 pub struct WordCache {
@@ -489,7 +343,7 @@ pub struct WordCache {
 impl WordCache {
     pub fn new() -> Self {
         WordCache {
-            inner: LruCache::new(NonZeroUsize::new(1024).unwrap()),
+            inner: LruCache::new(NonZeroUsize::new(768).unwrap()),
             stash: vec![],
             key: String::new(),
         }
@@ -498,13 +352,6 @@ impl WordCache {
     #[inline]
     pub fn add_glyph_cluster(&mut self, glyph_cluster: &GlyphCluster) {
         self.stash.push(glyph_cluster.into());
-    }
-
-    #[inline]
-    fn add_cluster(&mut self, chars: &[crate::font_introspector::text::cluster::Char]) {
-        for character in chars {
-            self.key.push(character.ch);
-        }
     }
 
     #[inline]
@@ -527,74 +374,5 @@ impl WordCache {
 
 #[derive(Default)]
 struct MetricsCache {
-    pub inner: FxHashMap<usize, (Metrics, Vec<i16>)>,
-}
-
-#[allow(clippy::too_many_arguments)]
-fn shape_clusters<I>(
-    fcx: &mut FontContext,
-    fonts: &FontLibraryData,
-    scx: &mut ShapeContext,
-    state: &mut ShapeState,
-    parser: &mut Parser<I>,
-    cluster: &mut CharCluster,
-    render_data: &mut RenderData,
-    current_line: usize,
-    word_cache: &mut WordCache,
-    metrics_cache: &mut MetricsCache,
-) -> bool
-where
-    I: Iterator<Item = Token> + Clone,
-{
-    if state.font_id.is_none() {
-        return false;
-    }
-
-    let current_font_id = state.font_id.unwrap();
-    let mut shaper = scx
-        .builder(fonts[current_font_id].as_ref())
-        .script(state.script)
-        .size(state.size)
-        .features(state.features.iter().copied())
-        .variations(state.synth.variations().iter().copied())
-        .variations(state.vars.iter().copied())
-        .build();
-
-    metrics_cache.inner.insert(
-        current_font_id,
-        (shaper.metrics(), shaper.normalized_coords().to_vec()),
-    );
-
-    let mut synth = Synthesis::default();
-    loop {
-        shaper.add_cluster(cluster);
-        word_cache.add_cluster(cluster.chars());
-
-        if !parser.next(cluster) {
-            render_data.push_run(
-                state.span,
-                &current_font_id,
-                state.size,
-                current_line as u32,
-                shaper,
-                word_cache,
-            );
-            return false;
-        }
-
-        let next_font = fcx.map_cluster(cluster, &mut synth, fonts, state.span);
-        if next_font != state.font_id || synth != state.synth {
-            render_data.push_run(
-                state.span,
-                &current_font_id,
-                state.size,
-                current_line as u32,
-                shaper,
-                word_cache,
-            );
-            state.font_id = next_font;
-            state.synth = synth;
-            return true;
-        }
-    }
+    pub inner: FxHashMap<usize, Metrics>,
 }
