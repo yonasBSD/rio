@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&amp;display=swap"><link rel="stylesheet" href="/rio/ko/assets/css/styles.42eabd25.css">
-<script src="/rio/ko/assets/js/runtime~main.cb8642b5.js" defer="defer"></script>
+<script src="/rio/ko/assets/js/runtime~main.79bba858.js" defer="defer"></script>
 <script src="/rio/ko/assets/js/main.6dde4258.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -20,6 +20,11 @@
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="unreleased">Unreleased<a href="#unreleased" class="hash-link" aria-label="Unreleased에 대한 직접 링크" title="Unreleased에 대한 직접 링크">​</a></h2>
 <ul>
 <li><strong>breaking</strong>: <code>CollapsedTab</code> has been renamed to <code>Bookmark</code>.</li>
+<li>Memory usage reduced by 75% (avg ~201mb to 48mb on first screen render).</li>
+<li>Implemented font data deallocator.</li>
+<li>Reduced font atlas buffer size to <code>1024</code>.</li>
+<li>Added lifetimes to application level (allowing to deallocate window structs once is removed).</li>
+<li>Migrated font context from <code>RwLock</code> to <code>Arc&lt;FairMutex&gt;</code>.</li>
 <li>MacOS does not clear with background operation anymore, instead it relies on window background.</li>
 <li>Background color has changed to <code>#0F0D0E</code>.</li>
 <li>Fix font emoji width.</li>
@@ -107,7 +112,7 @@
 <li>Fix scale update on transitioning between screens with different DPI.</li>
 <li>Support a short variant (<code>-w</code>) for <code>--working-dir</code> argument.</li>
 </ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="018">0.1.8<a href="#018" class="hash-link" aria-label="0.1.8에 대한 직접 링크" title="0.1.8에 대한 직접 링 크">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="018">0.1.8<a href="#018" class="hash-link" aria-label="0.1.8에 대한 직접 링크" title="0.1.8에 대한 직접 링크">​</a></h2>
 <ul>
 <li><strong>breaking:</strong> Introduced a new property in theme called <code>tabs-active-highlight</code>, default color is <code>#ff00ff</code>.</li>
 <li><strong>breaking:</strong> Removed breadcrumb navigation.</li>
@@ -369,7 +374,7 @@
 <li>Activate the hyperlink check whenever a modifier is changed (<code>alt</code> for windows/linux/bsd and <code>command</code> for macos).</li>
 <li>Fix Error when Double click on terminal side (Ref <a href="https://github.com/raphamorim/rio/issues/316" target="_blank" rel="noopener noreferrer">#316</a>).</li>
 </ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="0026">0.0.26<a href="#0026" class="hash-link" aria-label="0.0.26에 대한 직접 링크" title="0.0.26에 대한 직접 링크">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="0026">0.0.26<a href="#0026" class="hash-link" aria-label="0.0.26에 대한 직접   링크" title="0.0.26에 대한 직접 링크">​</a></h2>
 <ul>
 <li>Upgrade winit to 0.29.3.</li>
 <li>Support for <code>Run</code> actions key bindings for Microsoft Windows.</li>
@@ -449,7 +454,7 @@
 <li>Implemented <code>working-dir</code> parameter to cli <a href="https://github.com/raphamorim/rio/issues/258" target="_blank" rel="noopener noreferrer">https://github.com/raphamorim/rio/issues/258</a>.</li>
 <li>Remove legacy icns icons from bundle.</li>
 </ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="0020">0.0.20<a href="#0020" class="hash-link" aria-label="0.0.20에 대한 직접 링크" title="0.0.20에 대 한 직접 링크">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="0020">0.0.20<a href="#0020" class="hash-link" aria-label="0.0.20에 대한 직접 링크" title="0.0.20에 대한 직접 링크">​</a></h2>
 <ul>
 <li>Fix retrieve foreground process name to tabs.</li>
 <li>Fix cursor disappearing in the first tab whenever a new tab is created with NativeTab.</li>
