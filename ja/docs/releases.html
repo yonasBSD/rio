@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&amp;display=swap"><link rel="stylesheet" href="/ja/assets/css/styles.390fc736.css">
-<script src="/ja/assets/js/runtime~main.beef5f1e.js" defer="defer"></script>
+<script src="/ja/assets/js/runtime~main.bc5f238d.js" defer="defer"></script>
 <script src="/ja/assets/js/main.58681adb.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -25,6 +25,7 @@
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="0217-unreleased">0.2.17 (unreleased)<a href="#0217-unreleased" class="hash-link" aria-label="0.2.17 (unreleased) への直接リンク" title="0.2.17 (unreleased) への直接リンク">​</a></h2>
 <ul>
 <li>Skip passing sandbox env in Flatpak, fixes user environment in spawned shell <a href="https://github.com/raphamorim/rio/pull/1116" target="_blank" rel="noopener noreferrer">#1116</a> by <a href="https://github.com/ranisalt" target="_blank" rel="noopener noreferrer">@ranisalt</a>.</li>
+<li>On Windows, fixed crash in should_apps_use_dark_mode() for Windows versions &lt; 17763.</li>
 </ul>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="0216">0.2.16<a href="#0216" class="hash-link" aria-label="0.2.16 への直接リンク" title="0.2.16 への直接リンク">​</a></h2>
 <ul>
@@ -855,7 +856,7 @@
 <ul>
 <li>Fix for font styles using CachedSugar.</li>
 </ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="0010">0.0.10<a href="#0010" class="hash-link" aria-label="0.0.10 への直接リンク" title="0.0.10 への直接リ  ンク">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="0010">0.0.10<a href="#0010" class="hash-link" aria-label="0.0.10 への直接リンク" title="0.0.10 への直接リンク">​</a></h2>
 <ul>
 <li>Major refactor of Sugarloaf.<!-- -->
 <ul>
@@ -995,7 +996,7 @@
 <li>Allow to configure environment variables through config file.</li>
 <li>Stabilization of Sugarloaf render on emojis, symbols and unicode.</li>
 </ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="002">0.0.2<a href="#002" class="hash-link" aria-label="0.0.2 への直接リンク" title="0.0.2  への直接リンク">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="002">0.0.2<a href="#002" class="hash-link" aria-label="0.0.2 への直接リンク" title="0.0.2 への直接リンク">​</a></h2>
 <ul>
 <li><code>log-level</code> as configurable (<code>DEBUG</code>, <code>INFO</code>, <code>TRACE</code>, <code>ERROR</code>, <code>WARN</code> and <code>OFF</code>). <code>OFF</code> by default.</li>
 <li>Introduction of rendering engine called Sugarloaf.</li>
