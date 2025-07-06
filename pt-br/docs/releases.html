@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&amp;display=swap"><link rel="stylesheet" href="/pt-br/assets/css/styles.390fc736.css">
-<script src="/pt-br/assets/js/runtime~main.a79ab01b.js" defer="defer"></script>
+<script src="/pt-br/assets/js/runtime~main.fa239968.js" defer="defer"></script>
 <script src="/pt-br/assets/js/main.d7e21329.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -25,6 +25,19 @@
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="0221-unreleased">0.2.21 (unreleased)<a href="#0221-unreleased" class="hash-link" aria-label="0.2.21 (unreleased)link direto para" title="0.2.21 (unreleased)link direto para">​</a></h2>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="performance-optimizations">Performance Optimizations<a href="#performance-optimizations" class="hash-link" aria-label="Performance Optimizationslink direto para" title="Performance Optimizationslink direto para">​</a></h3>
 <ul>
+<li><strong>Major</strong>: Implemented efficient CVDisplayLink-based VSync synchronization for macOS<!-- -->
+<ul>
+<li>Perfect frame timing aligned with display hardware refresh cycles</li>
+<li>Eliminates screen tearing and stuttering through hardware VSync synchronization</li>
+<li>Adaptive refresh rate support: automatically handles 60Hz, 120Hz, ProMotion displays</li>
+<li>Multi-display support: adapts when windows move between displays with different refresh rates</li>
+<li>Grand Central Dispatch (GCD) integration for thread-safe cross-thread communication</li>
+<li><strong>Smart rendering</strong>: Only renders when content actually changes using dirty flag system</li>
+<li>Power efficient: skips unnecessary redraws when content is static, reducing CPU usage</li>
+<li>Professional rendering quality with smooth, tear-free visual updates</li>
+<li>CVDisplayLink runs on dedicated background thread, never blocking UI operations</li>
+</ul>
+</li>
 <li><strong>Major</strong>: Implemented a new text run caching system replacing line-based caching<!-- -->
 <ul>
 <li>Up to 96% reduction in text shaping overhead for repeated content</li>
