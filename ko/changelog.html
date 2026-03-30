@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&amp;display=swap"><link rel="stylesheet" href="/ko/assets/css/styles.5591d8de.css">
-<script src="/ko/assets/js/runtime~main.4ba3155f.js" defer="defer"></script>
+<script src="/ko/assets/js/runtime~main.5e8b5307.js" defer="defer"></script>
 <script src="/ko/assets/js/main.3b295c57.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -55,6 +55,11 @@
 <li class=""><strong>Native Vulkan Support</strong> (Linux/Windows): Hardware-accelerated rendering with Vulkan</li>
 <li class=""><strong>New GPU-Rendered Navigation</strong>: Faster, smoother tab interface</li>
 <li class=""><strong>Command Palette</strong>: Quick access to terminal functions</li>
+<li class=""><strong>Toggle Appearance Theme</strong>: Switch between dark and light themes at runtime via key binding (<code>ToggleAppearanceTheme</code>) or command palette (only available when adaptive theme is configured)</li>
+<li class=""><strong>Custom Mouse Cursor</strong>: Configurable mouse cursor effects via <code>effects.custom-mouse-cursor</code></li>
+<li class=""><strong>Trail Cursor</strong>: Smooth spring-animated cursor trail using neovide-style physics (enabled by default via <code>effects.trail-cursor</code>)</li>
+<li class=""><strong>Desktop Notifications</strong>: Support for OSC 9 (iTerm2) and OSC 777 (rxvt) terminal notifications using native platform APIs (macOS <code>UNUserNotificationCenter</code>, Linux D-Bus, Windows Toast)</li>
+<li class=""><strong>Force Theme</strong>: New <code>force-theme</code> configuration property to override the system theme when using adaptive themes</li>
 <li class=""><strong>Quake Window Mode</strong>: Drop-down terminal from top of screen</li>
 <li class=""><strong>macOS Traffic Light Positioning</strong>: Customize position of window control buttons<!-- -->
 <ul>
@@ -121,7 +126,7 @@
 <li class="">Fix font loader for fallbacks and extra.</li>
 <li class="">Fix font size updating through config.</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0236-1">0.2.36<a href="#0236-1" class="hash-link" aria-label="0.2.36에 대 한 직접 링크" title="0.2.36에 대한 직접 링크" translate="no">​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0236-1">0.2.36<a href="#0236-1" class="hash-link" aria-label="0.2.36에 대한 직접 링크" title="0.2.36에 대한 직접 링크" translate="no">​</a></h2>
 <ul>
 <li class="">Fix handler should process two intermediate bytes in CSI sequences by <a href="https://github.com/aymanbagabas" target="_blank" rel="noopener noreferrer" class="">@aymanbagabas</a>.</li>
 <li class="">Fix DECSCUSR.</li>
@@ -135,7 +140,7 @@
 <ul>
 <li class="">Fix issue for finding fonts introduced with the v0.2.33 new font loader.</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0233">0.2.33<a href="#0233" class="hash-link" aria-label="0.2.33에 대한 직접 링크" title="0.2.33에 대한 직접 링크" translate="no">​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0233">0.2.33<a href="#0233" class="hash-link" aria-label="0.2.33에 대한 직접 링크" title="0.2.33에 대한   직접 링크" translate="no">​</a></h2>
 <ul>
 <li class=""><strong>Platform-specific configuration improvements</strong> <a href="https://github.com/raphamorim/rio/issues/1341" target="_blank" rel="noopener noreferrer" class="">#1341</a>:<!-- -->
 <ul>
@@ -154,7 +159,7 @@
 <li class="">Fix kitty keyboard protocol.</li>
 <li class="">Support reporting terminal version via XTVERSION.</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0232">0.2.32<a href="#0232" class="hash-link" aria-label="0.2.32에 대한 직접 링크" title="0.2.32에 대한 직접 링크" translate="no">​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0232">0.2.32<a href="#0232" class="hash-link" aria-label="0.2.32에 대한 직접 링크" title="0.2.32에 대 한 직접 링크" translate="no">​</a></h2>
 <ul>
 <li class="">Updated WGPU to v27.0.1.</li>
 <li class="">Fix No backend are enabled on FreeBSD #1235.</li>
@@ -288,7 +293,7 @@
 <ul>
 <li class="">Fix some regressions introduced by 0.2.21.</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0221">0.2.21<a href="#0221" class="hash-link" aria-label="0.2.21에 대한 직접 링크" title="0.2.21에 대한 직접 링크" translate="no">​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0221">0.2.21<a href="#0221" class="hash-link" aria-label="0.2.21에 대 한 직접 링크" title="0.2.21에 대한 직접 링크" translate="no">​</a></h2>
 <ul>
 <li class="">Breaking: <code>navigation.use-current-directory</code> has been renamed to <code>navigation.current-working-directory</code>.</li>
 </ul>
@@ -782,7 +787,7 @@
 <li class=""><code>keyboard.use-kitty-keyboard-protocol</code> is now <code>false</code> by default.</li>
 <li class="">Add support for msys2/mingw builds release <a href="https://github.com/raphamorim/rio/issues/635" target="_blank" rel="noopener noreferrer" class="">#635</a> by <a href="https://github.com/Kreijstal" target="_blank" rel="noopener noreferrer" class="">@Kreijstal</a>.</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0114">0.1.14<a href="#0114" class="hash-link" aria-label="0.1.14에 대한 직접 링크" title="0.1.14에 대한 직접 링크" translate="no">​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0114">0.1.14<a href="#0114" class="hash-link" aria-label="0.1.14 에 대한 직접 링크" title="0.1.14에 대한 직접 링크" translate="no">​</a></h2>
 <ul>
 <li class=""><code>developer.log-file</code> has been renamed to <code>developer.enable-log-file</code>.</li>
 <li class=""><strong>breaking</strong>: <code>CollapsedTab</code> has been renamed to <code>Bookmark</code>.</li>
@@ -1348,7 +1353,7 @@
 <li class="">Fix for MacOS deadzone changing cursor to draggable on window buttons.</li>
 <li class="">Fix for scroll using tmux.</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0011">0.0.11<a href="#0011" class="hash-link" aria-label="0.0.11에 대한 직접 링크" title="0.0.11에   대한 직접 링크" translate="no">​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="0011">0.0.11<a href="#0011" class="hash-link" aria-label="0.0.11에 대한 직접 링크" title="0.0.11에 대한 직접 링크" translate="no">​</a></h2>
 <ul>
 <li class="">Fix for font styles using CachedSugar.</li>
 </ul>
